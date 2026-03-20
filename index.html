@@ -13,7 +13,7 @@
   1. GEHEIMWORT ÄNDERN
      Suche unten im <script>-Block nach der Zeile:
          const SECRET_KEY = "nordi2026";
-     Ändere "nordbert2026" auf dein Wunsch-Geheimwort.
+     Ändere "nordi" auf dein Wunsch-Geheimwort.
 
   2. AUF GITHUB PAGES DEPLOYEN
      a) Lade diese index.html in dein GitHub-Repository (z. B. "gutschein")
@@ -39,22 +39,38 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --cream:      #fdf6ec;
-      --gold:       #c9973a;
-      --gold-light: #f0c96e;
-      --red:        #b83232;
-      --red-dark:   #8b1a1a;
-      --text:       #3b2a1a;
-      --text-light: #7a5c3a;
-      --shadow:     rgba(100, 60, 10, 0.18);
+      --bg-1:       #090b12;
+      --bg-2:       #0f1626;
+      --card-bg:    #121a2a;
+      --card-edge:  #2a3754;
+      --gold:       #e3b466;
+      --gold-light: #f3ca84;
+      --red:        #d55a67;
+      --red-dark:   #9b2d3f;
+      --text:       #f3f6ff;
+      --text-light: #a7b3ce;
+      --shadow:     rgba(0, 0, 0, 0.45);
     }
 
     html, body {
       height: 100%;
-      background: var(--cream);
+      background:
+        radial-gradient(1200px 700px at 12% -8%, #25345a 0%, transparent 55%),
+        radial-gradient(900px 560px at 88% 108%, #3f2438 0%, transparent 52%),
+        linear-gradient(160deg, var(--bg-1), var(--bg-2));
       font-family: 'Lato', sans-serif;
       color: var(--text);
       overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: 0.35;
     }
 
     /* ── Blank screen (wrong / missing key) ──────────────── */
@@ -62,7 +78,7 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: var(--cream);
+      background: var(--bg-1);
     }
 
     /* ── Main wrapper ─────────────────────────────────────── */
@@ -107,8 +123,8 @@
     }
 
     .env-front {
-      background: linear-gradient(145deg, #e8d5b0, #d4b882);
-      border: 2px solid var(--gold);
+      background: linear-gradient(145deg, #1c2944, #141e33);
+      border: 2px solid #3a4b74;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -122,14 +138,14 @@
       position: absolute;
       inset: 0;
       background:
-        linear-gradient(135deg, transparent 49.5%, #c9973a55 49.5%, #c9973a55 50.5%, transparent 50.5%),
-        linear-gradient(225deg, transparent 49.5%, #c9973a55 49.5%, #c9973a55 50.5%, transparent 50.5%);
+        linear-gradient(135deg, transparent 49.5%, #f0c57f3b 49.5%, #f0c57f3b 50.5%, transparent 50.5%),
+        linear-gradient(225deg, transparent 49.5%, #f0c57f3b 49.5%, #f0c57f3b 50.5%, transparent 50.5%);
     }
 
     .env-seal {
       width: 60px;
       height: 60px;
-      background: radial-gradient(circle, var(--red) 60%, var(--red-dark));
+      background: radial-gradient(circle, #e06f7c 50%, var(--red-dark));
       border-radius: 50%;
       border: 3px solid var(--gold-light);
       display: flex;
@@ -167,13 +183,14 @@
     }
 
     .card {
-      background: #fff;
+      background: linear-gradient(170deg, #17233a, #10182c 65%);
       border-radius: 16px;
       padding: 2.8rem 2.4rem 2.4rem;
       box-shadow:
         0 2px 0 var(--gold),
         0 6px 40px var(--shadow),
-        inset 0 0 0 6px rgba(201,151,58,.08);
+        inset 0 0 0 1px var(--card-edge),
+        inset 0 0 0 6px rgba(227, 180, 102, .06);
       position: relative;
       overflow: hidden;
       text-align: center;
@@ -195,7 +212,7 @@
       bottom: -24px; right: -20px;
       font-size: 11rem;
       font-family: 'Playfair Display', serif;
-      color: rgba(201,151,58,.07);
+      color: rgba(227, 180, 102, .08);
       pointer-events: none;
       line-height: 1;
       font-weight: 700;
@@ -228,6 +245,7 @@
       padding: 0.35em 1.2em;
       border-radius: 2em;
       margin-bottom: 1.6rem;
+      box-shadow: 0 8px 18px rgba(155, 45, 63, 0.28);
     }
 
     .card-greeting {
@@ -249,7 +267,7 @@
 
     .card-body em {
       font-style: italic;
-      color: var(--red-dark);
+      color: #f5a4ae;
     }
 
     /* Divider */
