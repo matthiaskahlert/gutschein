@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gutschein</title>
+
+  <!--
+  ══════════════════════════════════════════════════════════
+  🎁 DIGITALER GUTSCHEIN – Bedienungsanleitung
+  ══════════════════════════════════════════════════════════
+
+  1. GEHEIMWORT ÄNDERN
+     Suche unten im <script>-Block nach der Zeile:
+         const SECRET_KEY = "nordbert2026";
+     Ändere "nordbert2026" auf dein Wunsch-Geheimwort.
+
+  2. AUF GITHUB PAGES DEPLOYEN
+     a) Lade diese index.html in dein GitHub-Repository (z. B. "gutschein")
+     b) Gehe zu: Einstellungen → Pages → Branch: main / (root) → Save
+     c) GitHub Pages ist dann unter https://<dein-name>.github.io/gutschein/ erreichbar
+
+  3. FERTIGER LINK ZUM VERSCHICKEN
+     https://<dein-name>.github.io/gutschein/?key=nordbert2026
+
+     (Ersetze <dein-name> und nordbert2026 mit deinen Werten.)
+  ══════════════════════════════════════════════════════════
+  -->
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ── Reset & base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream:      #fdf6ec;
+      --gold:       #c9973a;
+      --gold-light: #f0c96e;
+      --red:        #b83232;
+      --red-dark:   #8b1a1a;
+      --text:       #3b2a1a;
+      --text-light: #7a5c3a;
+      --shadow:     rgba(100, 60, 10, 0.18);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--cream);
+      font-family: 'Lato', sans-serif;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* ── Blank screen (wrong / missing key) ──────────────── */
+    #blank {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--cream);
+    }
+
+    /* ── Main wrapper ─────────────────────────────────────── */
+    #scene {
+      display: none; /* shown only when key is valid – set to flex by JS */
+      min-height: 100vh;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem 3rem;
+    }
+
+    /* ── Confetti canvas ──────────────────────────────────── */
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* ── Envelope reveal ──────────────────────────────────── */
+    .envelope-wrapper {
+      perspective: 900px;
+      margin-bottom: 2.5rem;
+    }
+
+    .envelope {
+      width: min(380px, 90vw);
+      height: 240px;
+      position: relative;
+      transform-style: preserve-3d;
+      cursor: pointer;
+      transition: transform 0.6s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* Front face – envelope body */
+    .env-front, .env-back {
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      backface-visibility: hidden;
+    }
+
+    .env-front {
+      background: linear-gradient(145deg, #e8d5b0, #d4b882);
+      border: 2px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 32px var(--shadow);
+      overflow: hidden;
+    }
+
+    /* Envelope V-fold lines */
+    .env-front::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, transparent 49.5%, #c9973a55 49.5%, #c9973a55 50.5%, transparent 50.5%),
+        linear-gradient(225deg, transparent 49.5%, #c9973a55 49.5%, #c9973a55 50.5%, transparent 50.5%);
+    }
+
+    .env-seal {
+      width: 60px;
+      height: 60px;
+      background: radial-gradient(circle, var(--red) 60%, var(--red-dark));
+      border-radius: 50%;
+      border: 3px solid var(--gold-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,.25);
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Hint text beneath envelope */
+    .env-hint {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-light);
+      margin-top: 0.5rem;
+      letter-spacing: 0.04em;
+      opacity: 0;
+      transition: opacity 0.4s 0.8s;
+    }
+
+    /* ── Voucher card ─────────────────────────────────────── */
+    .card-wrapper {
+      opacity: 0;
+      transform: translateY(30px) scale(0.97);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .card-wrapper.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 2.8rem 2.4rem 2.4rem;
+      box-shadow:
+        0 2px 0 var(--gold),
+        0 6px 40px var(--shadow),
+        inset 0 0 0 6px rgba(201,151,58,.08);
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    /* Gold top ribbon */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, var(--red-dark), var(--gold), var(--red-dark));
+    }
+
+    /* Watermark stamp */
+    .card::after {
+      content: '✓';
+      position: absolute;
+      bottom: -24px; right: -20px;
+      font-size: 11rem;
+      font-family: 'Playfair Display', serif;
+      color: rgba(201,151,58,.07);
+      pointer-events: none;
+      line-height: 1;
+      font-weight: 700;
+    }
+
+    /* Corner decorations */
+    .card-corner {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-color: var(--gold);
+      border-style: solid;
+      opacity: 0.6;
+    }
+    .card-corner.tl { top: 14px; left: 14px;  border-width: 2px 0 0 2px; }
+    .card-corner.tr { top: 14px; right: 14px; border-width: 2px 2px 0 0; }
+    .card-corner.bl { bottom: 14px; left: 14px;  border-width: 0 0 2px 2px; }
+    .card-corner.br { bottom: 14px; right: 14px; border-width: 0 2px 2px 0; }
+
+    /* ── Typography inside card ───────────────────────────── */
+    .card-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--red-dark), var(--red));
+      color: #fff;
+      font-family: 'Lato', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 0.35em 1.2em;
+      border-radius: 2em;
+      margin-bottom: 1.6rem;
+    }
+
+    .card-greeting {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.5rem, 5vw, 2rem);
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 1.2rem;
+      line-height: 1.2;
+    }
+
+    .card-body {
+      font-size: clamp(0.95rem, 3vw, 1.05rem);
+      line-height: 1.8;
+      color: var(--text);
+      max-width: 420px;
+      margin: 0 auto 1.6rem;
+    }
+
+    .card-body em {
+      font-style: italic;
+      color: var(--red-dark);
+    }
+
+    /* Divider */
+    .card-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin: 1.6rem 0;
+      color: var(--gold);
+    }
+    .card-divider::before,
+    .card-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+    .card-divider-icon { font-size: 1.1rem; }
+
+    /* Validity */
+    .card-validity {
+      font-size: 0.82rem;
+      color: var(--text-light);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+    .card-validity strong {
+      color: var(--red-dark);
+      font-weight: 700;
+    }
+
+    .card-expiry-note {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      font-style: italic;
+      opacity: 0.75;
+    }
+
+    /* Redeem note */
+    .card-redeem {
+      margin-top: 1.8rem;
+      font-size: 0.78rem;
+      color: var(--gold);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    /* ── Open button ──────────────────────────────────────── */
+    .open-btn {
+      position: absolute;
+      inset: 0;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Responsive tweaks ────────────────────────────────── */
+    @media (max-width: 420px) {
+      .card { padding: 2rem 1.4rem 1.8rem; }
+    }
+
+    /* ── Intro animation ──────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .envelope-wrapper {
+      animation: fadeUp 0.7s ease both;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Shown when key is missing or wrong – intentionally blank -->
+<div id="blank"></div>
+
+<!-- Main scene (hidden until key validated) -->
+<main id="scene" aria-label="Gutschein">
+
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Envelope reveal section -->
+  <div class="envelope-wrapper" id="envelope-wrapper">
+    <div class="envelope" id="envelope" title="Umschlag öffnen">
+      <div class="env-front">
+        <div class="env-seal">🎁</div>
+      </div>
+      <!-- Accessible open button overlaid on envelope -->
+      <button class="open-btn" id="open-btn" aria-label="Gutschein öffnen"></button>
+    </div>
+    <p class="env-hint" id="env-hint">Tippe um den Umschlag zu öffnen ✨</p>
+  </div>
+
+  <!-- Voucher card (initially hidden) -->
+  <div class="card-wrapper" id="card-wrapper" aria-live="polite">
+    <article class="card">
+      <!-- Corner decorations -->
+      <div class="card-corner tl" aria-hidden="true"></div>
+      <div class="card-corner tr" aria-hidden="true"></div>
+      <div class="card-corner bl" aria-hidden="true"></div>
+      <div class="card-corner br" aria-hidden="true"></div>
+
+      <div class="card-badge">Persönlicher Gutschein</div>
+
+      <h1 class="card-greeting">Hallo Nordi,</h1>
+
+      <p class="card-body">
+        dieser Gutschein berechtigt dich zu einem Nachmittag mit meiner<br>
+        tatkräftigen Hilfe.<br><br>
+        Einsatzgebiet frei wählbar:<br>
+        <em>Schleppen, Schrauben, Einrichten, Fluchen,<br>
+        kickern oder saufen.</em>
+      </p>
+
+      <div class="card-divider">
+        <span class="card-divider-icon" aria-hidden="true">🤝</span>
+      </div>
+
+      <p class="card-validity">
+        Gültig bis: <strong>31. Dezember 2026</strong>
+      </p>
+      <p class="card-expiry-note">
+        Danach verfällt der Anspruch wegen Altersschwäche des Helfers.
+      </p>
+
+      <p class="card-redeem">✨ Einlösbar wann immer du magst ✨</p>
+    </article>
+  </div>
+
+</main>
+
+<script>
+  /* ══════════════════════════════════════════════════════════
+     🔐 GEHEIMWORT – hier anpassen!
+     Ändere den Wert unten auf dein eigenes Geheimwort.
+     Der fertige Link sieht dann so aus:
+       https://<dein-name>.github.io/gutschein/?key=<geheimwort>
+  ══════════════════════════════════════════════════════════ */
+  const SECRET_KEY = "nordbert2026";
+  /* ══════════════════════════════════════════════════════════ */
+
+  (function () {
+    // --- Key check ---
+    const params = new URLSearchParams(window.location.search);
+    const keyValid = params.get("key") === SECRET_KEY;
+
+    const blank = document.getElementById("blank");
+    const scene = document.getElementById("scene");
+
+    if (!keyValid) {
+      // Show nothing – intentionally blank
+      blank.style.display = "block";
+      scene.style.display  = "none";
+      return;
+    }
+
+    // Key is valid → show the scene
+    scene.style.display = "flex";
+
+    // Show hint text after short delay
+    const envHint = document.getElementById("env-hint");
+    setTimeout(() => { envHint.style.opacity = "1"; }, 800);
+
+    // --- Open envelope interaction ---
+    let opened = false;
+    const openBtn    = document.getElementById("open-btn");
+    const envelope   = document.getElementById("envelope");
+    const cardWrapper = document.getElementById("card-wrapper");
+
+    function openEnvelope() {
+      if (opened) return;
+      opened = true;
+
+      // Hide hint
+      envHint.style.opacity = "0";
+
+      // Animate envelope up and away
+      envelope.style.transition = "transform 0.5s ease, opacity 0.4s 0.3s ease";
+      envelope.style.transform  = "translateY(-40px) rotateX(30deg) scale(0.9)";
+      envelope.style.opacity    = "0";
+
+      // Reveal card
+      setTimeout(() => {
+        document.getElementById("envelope-wrapper").style.display = "none";
+        cardWrapper.classList.add("visible");
+        launchConfetti();
+      }, 450);
+    }
+
+    openBtn.addEventListener("click", openEnvelope);
+
+    // ── Confetti ──────────────────────────────────────────
+    function launchConfetti() {
+      const canvas = document.getElementById("confetti-canvas");
+      const ctx    = canvas.getContext("2d");
+
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const colors = ["#c9973a", "#f0c96e", "#b83232", "#fdf6ec", "#8b1a1a", "#d4b882"];
+      const pieces = [];
+      const COUNT  = 120;
+
+      for (let i = 0; i < COUNT; i++) {
+        pieces.push({
+          x:    Math.random() * canvas.width,
+          y:    Math.random() * canvas.height - canvas.height,
+          w:    6 + Math.random() * 8,
+          h:    3 + Math.random() * 5,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          angle: Math.random() * Math.PI * 2,
+          spin:  (Math.random() - 0.5) * 0.15,
+          vx:   (Math.random() - 0.5) * 2.5,
+          vy:   1.5 + Math.random() * 3,
+          alpha: 1,
+        });
+      }
+
+      let frame = 0;
+      const TOTAL_FRAMES = 220;
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        frame++;
+
+        pieces.forEach(p => {
+          p.x     += p.vx;
+          p.y     += p.vy;
+          p.angle += p.spin;
+
+          // Fade out in last third of animation
+          if (frame > TOTAL_FRAMES * 0.6) {
+            p.alpha -= 0.012;
+          }
+
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          ctx.restore();
+        });
+
+        if (frame < TOTAL_FRAMES) {
+          requestAnimationFrame(draw);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    // Resize canvas on window resize
+    window.addEventListener("resize", () => {
+      const canvas = document.getElementById("confetti-canvas");
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  })();
+</script>
+</body>
+</html>
